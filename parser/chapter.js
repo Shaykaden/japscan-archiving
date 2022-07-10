@@ -1,11 +1,10 @@
 // intellisense doesn't seem to work with extra
 // this random thing work
-const { JSDOM } = require('jsdom')
-
 if (false) {
 	const puppeteer = require('puppeteer')
 }
 const puppeteer = require('puppeteer-extra')
+const { JSDOM } = require('jsdom')
 
 // add stealth plugin
 const StealthPlugin = require('puppeteer-extra-plugin-stealth')
@@ -45,6 +44,7 @@ puppeteer.launch({ headless: true}).then(async browser => {
 							(endTime - startTime) / 1000
 						} seconds`
 					)
+
 				}
 				req.abort()
 			} else {
