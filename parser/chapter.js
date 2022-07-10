@@ -13,7 +13,7 @@ puppeteer.use(StealthPlugin())
 
 const authorizedRessources = ['image', 'script', 'document'];
 const authorizedUrl = ['//www.japscan', 'c.japscan', 'cloudflare']
-const authorizedScript = ['axkt-htpgrw.yh.js']
+const prohibibedScript = ['axkt-htpgrw.yh.js']
 
 const mangaInformation = {
 	url: 'https://www.japscan.ws/lecture-en-ligne/komi-san-wa-komyushou-desu/1/',
@@ -21,7 +21,7 @@ const mangaInformation = {
 }
 
 
-puppeteer.launch({ headless: false, devtools: true }).then(async browser => {
+puppeteer.launch({ headless: true}).then(async browser => {
 	const { window } = new JSDOM()
 	console.log('Running script...')
 	var startTime = window.performance.now()
@@ -48,7 +48,7 @@ puppeteer.launch({ headless: false, devtools: true }).then(async browser => {
 				}
 				req.abort()
 			} else {
-                if(authorizedScript.some(script => req.url().includes(script))) {
+                if(prohibibedScript.some(script => req.url().includes(script))) {
                     req.abort()
                 }
                 else {
