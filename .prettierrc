@@ -6,4 +6,5 @@
 	"bracketSpacing": true,
 	"arrowParens": "avoid",
 	"trailingComma": "es5"
+	
 }

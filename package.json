@@ -4,7 +4,7 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "start": "node index",
+    "start": "node parser/mangaInfo",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "repository": {
@@ -20,12 +20,15 @@
   "keywords": [],
   "dependencies": {
     "@types/node": "^18.0.3",
+    "config": "^3.3.7",
     "jsdom": "^20.0.0",
+    "lowdb": "^3.0.0",
     "node": "^18.5.0",
     "prettier": "^2.7.1",
     "puppeteer": "^15.3.2",
     "puppeteer-cluster": "^0.23.0",
     "puppeteer-extra": "^3.3.4",
-    "puppeteer-extra-plugin-stealth": "^2.11.0"
+    "puppeteer-extra-plugin-stealth": "^2.11.0",
+    "sqlite3": "^5.0.8"
   }
 }

@@ -1,3 +1,4 @@
+
 // intellisense doesn't seem to work with extra
 // this random thing work
 if (false) {
@@ -5,6 +6,8 @@ if (false) {
 }
 const puppeteer = require('puppeteer-extra');
 const { JSDOM } = require('jsdom');
+
+const fs = require('fs');
 
 // add stealth plugin
 const StealthPlugin = require('puppeteer-extra-plugin-stealth');
@@ -26,6 +29,20 @@ puppeteer.launch({ headless: true }).then(async browser => {
 
 	const page = await browser.newPage();
 	let index = 1;
+
+	fs.readFile('./tmp/mangas.json', 'utf8', (err, data) => {
+		if (err) {
+			console.log(`Error reading file from disk: ${err}`);
+		} else {
+
+			// parse JSON string to JSON object
+			const mangas = JSON.parse(data);
+
+			// print all databases
+			console.log(mangas[0]);
+		}
+	});
+
 
 	page.setRequestInterception(true);
 	page.on('request', req => {
@@ -60,6 +77,7 @@ puppeteer.launch({ headless: true }).then(async browser => {
 			req.abort();
 		}
 	});
+	
 
-	await page.goto(mangaInformation.url + index + '.html');
+	// await page.goto(mangaInformation.url + index + '.html');
 });
