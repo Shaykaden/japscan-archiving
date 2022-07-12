@@ -23,7 +23,6 @@ const mangaInformation = {
 puppeteer
 	.launch({
 		headless: true,
-		userDataDir: '../tmp',
 	})
 	.then(async browser => {
 		console.log('Running script...');
@@ -53,6 +52,5 @@ puppeteer
 		}
 		console.log(`parsing ${urls.length} pages...`);
 		mangaInfoCluster(urls);
-		page.close();
 		page.close();
 	});

@@ -29,10 +29,7 @@ puppeteer.launch({ headless: true }).then(async browser => {
 
 	page.setRequestInterception(true);
 	page.on('request', req => {
-		if (
-			authorizedRessources.includes(req.resourceType()) &&
-			authorizedUrl.some(url => req.url().includes(url))
-		) {
+		if ( authorizedRessources.includes(req.resourceType()) && authorizedUrl.some(url => req.url().includes(url))) {
 			if (['image'].includes(req.resourceType())) {
 				console.log('page ' + index + ': ' + req.url());
 				index += 1;

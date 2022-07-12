@@ -11,18 +11,18 @@ const fs = require('fs');
 
 // add stealth plugin
 const StealthPlugin = require('puppeteer-extra-plugin-stealth');
+const internal = require('stream');
+const { addChapter } = require('../utils/db-utils');
 puppeteer.use(StealthPlugin());
 
-const authorizedRessources = ['image', 'script', 'document'];
-const authorizedUrl = ['//www.japscan', 'c.japscan', 'cloudflare'];
-const prohibibedScript = ['axkt-htpgrw.yh.js'];
+const authorizedRessources = ['document'];
 
 const mangaInformation = {
-	url: 'https://www.japscan.ws/lecture-en-ligne/komi-san-wa-komyushou-desu/1/',
-	page: 13,
+	url: 'https://www.japscan.ws/manga/komi-san-wa-komyushou-desu/',
+	listPathElement: '#chapters_list > div > div > a'
 };
 
-puppeteer.launch({ headless: true }).then(async browser => {
+puppeteer.launch({ headless: false, devtools: true }).then(async browser => {
 	const { window } = new JSDOM();
 	console.log('Running script...');
 	var startTime = window.performance.now();
@@ -30,54 +30,22 @@ puppeteer.launch({ headless: true }).then(async browser => {
 	const page = await browser.newPage();
 	let index = 1;
 
-	fs.readFile('./tmp/mangas.json', 'utf8', (err, data) => {
-		if (err) {
-			console.log(`Error reading file from disk: ${err}`);
-		} else {
-
-			// parse JSON string to JSON object
-			const mangas = JSON.parse(data);
-
-			// print all databases
-			console.log(mangas[0]);
-		}
-	});
-
-
 	page.setRequestInterception(true);
 	page.on('request', req => {
-		if (
-			authorizedRessources.includes(req.resourceType()) &&
-			authorizedUrl.some(url => req.url().includes(url))
-		) {
-			if (['image'].includes(req.resourceType())) {
-				console.log('page ' + index + ': ' + req.url());
-				index += 1;
-				if (index <= mangaInformation.page) {
-					page.goto(mangaInformation.url + index + '.html');
-				} else {
-					var endTime = window.performance.now();
-					console.log(
-						`execution time: ${
-							(endTime - startTime) / 1000
-						} seconds`
-					);
-				}
-				req.abort();
-			} else {
-				if (
-					prohibibedScript.some(script => req.url().includes(script))
-				) {
-					req.abort();
-				} else {
-					req.continue();
-				}
-			}
+		if ( authorizedRessources.includes(req.resourceType())) {
+			req.continue()
 		} else {
 			req.abort();
 		}
 	});
-	
 
-	// await page.goto(mangaInformation.url + index + '.html');
+	await page.goto(mangaInformation.url);
+
+	const chapterHandles = await page.$$(mangaInformation.listPathElement);
+	// console.log(volumeHandles.length);
+
+	for (const chapter of chapterHandles) {
+		const url = await chapter.evaluate(item => item.href, chapter);
+		addChapter(1, url)
+	}
 });

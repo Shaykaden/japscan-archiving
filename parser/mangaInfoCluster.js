@@ -63,7 +63,7 @@ async function mangaInfoCluster(urls) {
 				manga
 			);
 
-			addManga(title, link)
+			addManga(title, link, total)
 			total += 1;
 		}
 		const number = url.charAt(url.length - 1);
