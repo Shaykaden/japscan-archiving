@@ -21,29 +21,37 @@ const mangaInformation = {
 	page: 13,
 };
 
-puppeteer.launch({ headless: true }).then(async browser => {
+puppeteer.launch({ headless: false }).then(async browser => {
 	const { window } = new JSDOM();
 	console.log('Running script...');
 	var startTime = window.performance.now();
 
 	const page = await browser.newPage();
 	let index = 1;
+	let pagesNumber = null
 
 	page.setRequestInterception(true);
 	page.on('request', req => {
-		if ( authorizedRessources.includes(req.resourceType()) && authorizedUrl.some(url => req.url().includes(url))) {
+		if (
+			authorizedRessources.includes(req.resourceType()) &&
+			authorizedUrl.some(url => req.url().includes(url))
+		) {
 			if (['image'].includes(req.resourceType())) {
 				console.log('page ' + index + ': ' + req.url());
 				index += 1;
-				if (index <= mangaInformation.page) {
-					page.goto(mangaInformation.url + index + '.html');
-				} else {
-					var endTime = window.performance.now();
-					console.log(
-						`execution time: ${
-							(endTime - startTime) / 1000
-						} seconds`
-					);
+
+				// if not the first page check if it's the last page
+				if (index != 1) {
+					if (index <= pagesNumber) {
+						page.goto(mangaInformation.url + index + '.html');
+					} else {
+						var endTime = window.performance.now();
+						console.log(
+							`execution time: ${
+								(endTime - startTime) / 1000
+							} seconds`
+						);
+					}
 				}
 				req.abort();
 			} else {
@@ -60,5 +68,27 @@ puppeteer.launch({ headless: true }).then(async browser => {
 		}
 	});
 
-	await page.goto(mangaInformation.url + index + '.html');
+	new Promise(async (resolve) => {
+		await page.goto(mangaInformation.url + index + '.html');
+		pageSelector = await page.$(
+			'body > div.container.mt-4 > div:nth-child(1) > div.rounded-0.card-body > div > p:nth-child(6)'
+		);
+		pagesNumber = await page
+			.evaluate(el => el.textContent.split(' '), pageSelector)
+			.then(textContent => {
+				return textContent[textContent.length - 1];
+			})
+			.catch(() =>
+				resolve(
+					`error: failed to find number of pages on chapter ${mangaInformation.url}`
+				)
+			);
+		resolve();
+	})
+		.then(async () => {
+			await page.goto(mangaInformation.url + index + '.html');
+		})
+		.catch(err => {
+			console.log(err);
+		});
 });

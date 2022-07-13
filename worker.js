@@ -3,6 +3,7 @@
 // returns a promise which resolves with the task's result.
 
 const workerpool = require('workerpool');
+const { parsingChapter } = require('./parser/chapter');
 const { parsingManga } = require('./parser/manga');
 const { mangaInfo } = require('./parser/mangaInfo');
 
@@ -10,5 +11,6 @@ const { mangaInfo } = require('./parser/mangaInfo');
 // create a worker and register public functions
 workerpool.worker({
   mangaInfo: mangaInfo,
-  parsingManga: parsingManga
+  parsingManga: parsingManga,
+  parsingChapter: parsingChapter
 });
