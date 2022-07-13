@@ -67,7 +67,7 @@ async function parsingManga(mangas) {
 
 			const splittedUrl = url.split('/');
 			const numero = splittedUrl[splittedUrl.length - 2];
-			chapterList.push([numero, url, manga.id, [], null]);
+			chapterList.push([numero, url, manga.id, null, null]);
 		}
 		
 		addChapters(chapterList)

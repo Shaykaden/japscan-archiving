@@ -85,6 +85,24 @@ function getMangaToParse() {
 	})
 }
 
+function updateAddChapterImagesUrl(mangaId, urls) {
+	let db = new sqlite3.Database(config.dbName, err => {
+		if (err) {
+			throw err;
+		}
+	});
+	const query = `UPDATE chapter
+					set pagesUrl=?
+					where mangaId=? AND numero=?`
+
+		db.run("UPDATE f11 SET GIVENNAME=?, SURNAME=? WHERE id=?",inputData,function(err,rows){
+			
+		});
+
+
+	db.close();
+}
+
 function addTotalManga(total) {
 	let db = new sqlite3.Database(config.dbName, err => {
 		if (err) {
