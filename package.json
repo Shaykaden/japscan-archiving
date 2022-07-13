@@ -29,6 +29,10 @@
     "puppeteer-cluster": "^0.23.0",
     "puppeteer-extra": "^3.3.4",
     "puppeteer-extra-plugin-stealth": "^2.11.0",
-    "sqlite3": "^5.0.8"
+    "sqlite3": "^5.0.8",
+    "workerpool": "^6.2.1"
+  },
+  "devDependencies": {
+    "eslint": "^8.19.0"
   }
 }

@@ -1,6 +1,8 @@
 // intellisense doesn't seem to work with extra
 // this random thing work
+// eslint-disable-next-line no-constant-condition
 if (false) {
+	// eslint-disable-next-line no-unused-vars
 	const puppeteer = require('puppeteer');
 }
 const puppeteer = require('puppeteer-extra');
