@@ -17,7 +17,7 @@ function initDB() {
 		'CREATE TABLE IF NOT EXISTS manga(title VARCHAR(255), url VARCHAR(255), mangaId INTEGER, isParsed BOOLEAN)'
 	);
 	db.run(
-		'CREATE TABLE IF NOT EXISTS chapter(numero TEXT, mangaId INTEGER, url VARCHAR(255), pagesUrl TEXT, pagesParsed BOOLEAN)'
+		'CREATE TABLE IF NOT EXISTS chapter(numero TEXT, mangaId INTEGER, url VARCHAR(255), pagesUrl TEXT, pagesDownloaded BOOLEAN)'
 	);
 
 	db.close();
@@ -49,7 +49,7 @@ function addChapters(chapterList) {
 	});
 		const length = chapterList.length;
 		db.run(
-			`INSERT INTO chapter(numero, url, mangaId, pagesUrl, pagesParsed) VALUES${length > 1 ?  '(?, ?, ?, ?, ?),'.repeat(length-1) + '(?, ?, ?, ?, ?)' : '(?, ?, ?, ?, ?)'}`,
+			`INSERT INTO chapter(numero, url, mangaId, pagesUrl, pagesDownloaded) VALUES${length > 1 ?  '(?, ?, ?, ?, ?),'.repeat(length-1) + '(?, ?, ?, ?, ?)' : '(?, ?, ?, ?, ?)'}`,
 			chapterList.flat()
 		);
 	db.close();
@@ -74,7 +74,7 @@ function getMangaToParse() {
 				}
 				const rowData = [];
 				rows.forEach(row => {
-					rowData.push({ id: row.mangaId, url: row.url });
+					rowData.push({ mangaId: row.mangaId, url: row.url });
 				});
 
 				resolve(rowData);
@@ -85,7 +85,7 @@ function getMangaToParse() {
 	})
 }
 
-function updateAddChapterImagesUrl(mangaId, urls) {
+function updateAddChapterImagesUrl(mangaId, numero, urls) {
 	let db = new sqlite3.Database(config.dbName, err => {
 		if (err) {
 			throw err;
@@ -95,12 +95,41 @@ function updateAddChapterImagesUrl(mangaId, urls) {
 					set pagesUrl=?
 					where mangaId=? AND numero=?`
 
-		db.run("UPDATE f11 SET GIVENNAME=?, SURNAME=? WHERE id=?",inputData,function(err,rows){
-			
-		});
+		db.run(query, [urls, mangaId, numero]);
 
 
 	db.close();
+}
+
+function getChapterToParse() {
+	const chapters = new Promise((resolve, reject) => {
+		let db = new sqlite3.Database(config.dbName, err => {
+			if (err) {
+				throw err;
+			}
+		});
+
+		db.all(
+			`SELECT * FROM chapter WHERE pagesUrl IS NULL`,
+			[],
+			(err, rows) => {
+				if (err) {
+					console.log(`error selecting manga not parsed ${err}`);
+					reject(err);
+				}
+				const rowData = [];
+				rows.forEach(row => {
+					rowData.push({ mangaId: row.mangaId, numero: row.numero, url: row.url  });
+				});
+
+				resolve(rowData);
+			}
+		);
+
+		db.close();
+	}).then(res => {return res})
+
+	return chapters
 }
 
 function addTotalManga(total) {
@@ -135,14 +164,19 @@ function test(chapterList) {
 
 	db.close();
 }
+
 // test([[1, 'url', 1, null, null], [2, 'url2', 1, null, null]])
 // addChapters([[1, 'url', 1, null, null], [2, 'url2', 1, null, null]])
+
 
 module.exports = {
 	initDB,
 	addManga,
 	addChapters,
 	addTotalManga,
+	updateAddChapterImagesUrl,
 	getMangaToParse,
+	getChapterToParse
 };
 // addManga('test', 'url');
+

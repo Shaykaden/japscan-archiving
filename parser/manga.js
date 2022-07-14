@@ -28,8 +28,8 @@ const mangaInformation = {
 
 async function parsingManga(mangas) {
 
-	console.log('start');
-	console.log(mangas);
+	console.log('parsing manga...');
+	// console.log(mangas);
 	const { window } = new JSDOM();
 	var startTime = window.performance.now();
 
@@ -73,7 +73,7 @@ async function parsingManga(mangas) {
 		addChapters(chapterList)
 		counter += 1;
 
-		console.log('counter :' +counter);
+		// console.log('counter :' +counter);
 		if (counter === manga.length) {
 			var endTime = window.performance.now();
 			console.log(
@@ -84,7 +84,7 @@ async function parsingManga(mangas) {
 
 	var counter = 0;
 	var chapCounter = 0;
-	console.log(mangas.length);
+	// console.log(mangas.length);
 	for (const manga of mangas) {
 		await cluster.queue(manga);
 	}

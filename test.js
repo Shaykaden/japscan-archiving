@@ -1,14 +1,7 @@
-// This example worker runs asynchronous tasks. In practice, this could be
-// interacting with a database or a web service. The asynchronous function
-// returns a promise which resolves with the task's result.
+(async () => {
 
-const workerpool = require('workerpool');
-const { parsingManga } = require('./parser/manga');
-const { mangaInfo } = require('./parser/mangaInfo');
-
-
-// create a worker and register public functions
-workerpool.worker({
-  mangaInfo: mangaInfo,
-  parsingManga: parsingManga
-});
+	console.log('coucou');
+	setInterval(() => {
+		console.log('oui');
+	}, 1000);
+})()

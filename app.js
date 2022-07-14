@@ -50,7 +50,7 @@ puppeteer
 		// get the number of pages
 		const pagesElement = await page.$( '#main > div > ul > li:nth-child(9) > a');
 		// const numberOfPages = await page.evaluate( el => el.innerHTML, pagesElement);
-		const numberOfPages = 10 
+		const numberOfPages = 1 
 
 		let urls = [];
 		for (let i = 1; i <= numberOfPages; i++) {

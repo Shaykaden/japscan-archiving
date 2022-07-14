@@ -9,6 +9,7 @@ const { Cluster } = require('puppeteer-cluster');
 // add stealth plugin
 const StealthPlugin = require('puppeteer-extra-plugin-stealth');
 const { addManga, addTotalManga } = require('../utils/db-utils');
+const { poolHandler } = require('./poolHandler');
 puppeteer.use(StealthPlugin());
 
 const authorizedRessources = ['script', 'document'];
@@ -105,7 +106,9 @@ async function mangaInfo (urls) {
 		await cluster.queue(url);
 	}
 
-	await cluster.idle();
+	await cluster.idle()
+		console.log('next');
+		poolHandler()
 	await cluster.close();
 }
 
