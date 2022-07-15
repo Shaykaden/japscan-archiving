@@ -1,7 +1,7 @@
-(async () => {
+const { poolHandler } = require("./parser/poolHandler")
 
-	console.log('coucou');
-	setInterval(() => {
-		console.log('oui');
-	}, 1000);
-})()
+async function test() {
+	poolHandler()
+}
+
+test()

@@ -159,7 +159,7 @@ async function parsingChapter() {
 						} else {
 
 							counter += 1
-							console.log('skip not manga');
+							// console.log('skip not manga');
 						}
 					});
 			})
@@ -185,7 +185,7 @@ async function parsingChapter() {
 
 
 	await cluster.idle().then((state = 0));
-	// await cluster.close();
+	await cluster.close();
 
 }
 

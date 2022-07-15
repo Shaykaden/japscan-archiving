@@ -63,11 +63,11 @@ async function parsingManga(mangas) {
 		for (const chapter of chapterHandles) {
 			const url = await chapter.evaluate(item => item.href, chapter);
 			chapCounter += 1
-			// console.log(chapCounter + ' ' + url);
+			console.log(chapCounter + ' ' + url);
 
 			const splittedUrl = url.split('/');
 			const numero = splittedUrl[splittedUrl.length - 2];
-			chapterList.push([numero, url, manga.id, null, null]);
+			chapterList.push([numero, url, manga.mangaId, null, null]);
 		}
 		
 		addChapters(chapterList)

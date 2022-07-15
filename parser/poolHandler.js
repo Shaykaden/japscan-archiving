@@ -22,11 +22,11 @@ async function poolHandler() {
 	});
 
 	// parsing chapter
-	var running = false;
+	var runningChapter = false;
 	setInterval(() => {
 		// test if all mangas are already parsed
-		if (!running) {
-			running = true
+		if (!runningChapter) {
+			runningChapter = true;
 			pool.exec('parsingChapter', [])
 				.then(res => {
 					console.log('parsingChapter finished');
@@ -36,12 +36,29 @@ async function poolHandler() {
 				})
 				.then(function () {
 					pool.terminate(); // terminate all workers when done
-					running = false
+					runningChapter = false;
 				});
 		}
-	}, 60000);
+	}, 6000);
 
 	// downloading chapter
+	// var runningDownload = false;
+	// setInterval(() => {
+	// 	if (!runningDownload) {
+	// 		runningDownload = true;
+	// 		pool.exec('download', [])
+	// 			.then(res => {
+	// 				console.log('download chapter finished');
+	// 			})
+	// 			.catch(function (err) {
+	// 				console.error(err);
+	// 			})
+	// 			.then(function () {
+	// 				pool.terminate(); // terminate all workers when done
+	// 				runningDownload = false;
+	// 			});
+	// 	}
+	// }, 6000);
 }
 
 module.exports.poolHandler = poolHandler;

@@ -47,11 +47,15 @@ function addChapters(chapterList) {
 			throw err;
 		}
 	});
-		const length = chapterList.length;
-		db.run(
-			`INSERT INTO chapter(numero, url, mangaId, pagesUrl, pagesDownloaded) VALUES${length > 1 ?  '(?, ?, ?, ?, ?),'.repeat(length-1) + '(?, ?, ?, ?, ?)' : '(?, ?, ?, ?, ?)'}`,
-			chapterList.flat()
-		);
+	const length = chapterList.length;
+	db.run(
+		`INSERT INTO chapter(numero, url, mangaId, pagesUrl, pagesDownloaded) VALUES${
+			length > 1
+				? '(?, ?, ?, ?, ?),'.repeat(length - 1) + '(?, ?, ?, ?, ?)'
+				: '(?, ?, ?, ?, ?)'
+		}`,
+		chapterList.flat()
+	);
 	db.close();
 }
 
@@ -82,7 +86,7 @@ function getMangaToParse() {
 		);
 
 		db.close();
-	})
+	});
 }
 
 function updateAddChapterImagesUrl(mangaId, numero, urls) {
@@ -93,16 +97,30 @@ function updateAddChapterImagesUrl(mangaId, numero, urls) {
 	});
 	const query = `UPDATE chapter
 					set pagesUrl=?
-					where mangaId=? AND numero=?`
+					where mangaId=? AND numero=?`;
 
-		db.run(query, [urls, mangaId, numero]);
+	db.run(query, [JSON.stringify(urls), mangaId, numero]);
 
+	db.close();
+}
+
+function updatePagesDownloaded(mangaId, numero, pages) {
+	let db = new sqlite3.Database(config.dbName, err => {
+		if (err) {
+			throw err;
+		}
+	});
+	const query = `UPDATE chapter
+					set pagesUrl=?
+					where mangaId=? AND numero=?`;
+
+	db.run(query, [JSON.stringify(urls), mangaId, numero]);
 
 	db.close();
 }
 
 function getChapterToParse() {
-	const chapters = new Promise((resolve, reject) => {
+	return new Promise((resolve, reject) => {
 		let db = new sqlite3.Database(config.dbName, err => {
 			if (err) {
 				throw err;
@@ -119,7 +137,11 @@ function getChapterToParse() {
 				}
 				const rowData = [];
 				rows.forEach(row => {
-					rowData.push({ mangaId: row.mangaId, numero: row.numero, url: row.url  });
+					rowData.push({
+						mangaId: row.mangaId,
+						numero: row.numero,
+						url: row.url,
+					});
 				});
 
 				resolve(rowData);
@@ -127,9 +149,42 @@ function getChapterToParse() {
 		);
 
 		db.close();
-	}).then(res => {return res})
+	});
+}
 
-	return chapters
+function getChapterToDownload() {
+	return new Promise((resolve, reject) => {
+		let db = new sqlite3.Database(config.dbName, err => {
+			if (err) {
+				throw err;
+			}
+		});
+
+		db.all(
+			`SELECT * 
+			FROM chapter INNER JOIN manga ON chapter.mangaId = manga.mangaId
+			WHERE pagesUrl IS NOT NULL`,
+			[],
+			(err, rows) => {
+				if (err) {
+					console.log(`error selecting manga not parsed ${err}`);
+					reject(err);
+				}
+				const rowData = [];
+				rows.forEach(row => {
+					rowData.push({
+						title: row.title,
+						numero: row.numero,
+						pagesUrl: row.pagesUrl,
+					});
+				});
+
+				resolve(rowData);
+			}
+		);
+
+		db.close();
+	});
 }
 
 function addTotalManga(total) {
@@ -156,18 +211,22 @@ function test(chapterList) {
 
 	const length = chapterList.length;
 	// console.log(length);
-		// console.log(`INSERT INTO chapter(numero, url, mangaId, pagesUrl, pagesParsed) VALUES${length > 1 ?  '(?, ?, ?, ?, ?),'.repeat(length-1) + '(?, ?, ?, ?, ?)' : '(i, ?, ?, ?, ?)'}`)
-		db.run(
-			`INSERT INTO chapter(numero, url, mangaId, pagesUrl, pagesParsed) VALUES${length > 1 ?  '(?, ?, ?, ?, ?),'.repeat(length-1) + '(?, ?, ?, ?, ?)' : '(i, ?, ?, ?, ?)'}`,
-			chapterList.flat()
-		);
+	// console.log(`INSERT INTO chapter(numero, url, mangaId, pagesUrl, pagesParsed) VALUES${length > 1 ?  '(?, ?, ?, ?, ?),'.repeat(length-1) + '(?, ?, ?, ?, ?)' : '(i, ?, ?, ?, ?)'}`)
+	db.run(
+		`INSERT INTO chapter(numero, url, mangaId, pagesUrl, pagesParsed) VALUES${
+			length > 1
+				? '(?, ?, ?, ?, ?),'.repeat(length - 1) + '(?, ?, ?, ?, ?)'
+				: '(i, ?, ?, ?, ?)'
+		}`,
+		chapterList.flat()
+	);
 
 	db.close();
 }
 
 // test([[1, 'url', 1, null, null], [2, 'url2', 1, null, null]])
 // addChapters([[1, 'url', 1, null, null], [2, 'url2', 1, null, null]])
-
+// updateAddChapterImagesUrl()
 
 module.exports = {
 	initDB,
@@ -176,7 +235,7 @@ module.exports = {
 	addTotalManga,
 	updateAddChapterImagesUrl,
 	getMangaToParse,
-	getChapterToParse
+	getChapterToDownload,
+	getChapterToParse,
 };
 // addManga('test', 'url');
-

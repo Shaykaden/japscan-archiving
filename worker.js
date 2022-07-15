@@ -4,6 +4,7 @@
 
 const workerpool = require('workerpool');
 const { parsingChapter } = require('./parser/chapter');
+const { download } = require('./parser/download');
 const { parsingManga } = require('./parser/manga');
 const { mangaInfo } = require('./parser/mangaInfo');
 
@@ -12,5 +13,6 @@ const { mangaInfo } = require('./parser/mangaInfo');
 workerpool.worker({
   mangaInfo: mangaInfo,
   parsingManga: parsingManga,
-  parsingChapter: parsingChapter
+  parsingChapter: parsingChapter,
+  download: download
 });
