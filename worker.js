@@ -6,12 +6,12 @@ const workerpool = require('workerpool');
 const { parsingChapter } = require('./parser/chapter');
 const { download } = require('./parser/download');
 const { parsingManga } = require('./parser/manga');
-const { mangaInfo } = require('./parser/mangaInfo');
+const { MangaPage } = require('./parser/MangaPage');
 
 
 // create a worker and register public functions
 workerpool.worker({
-  mangaInfo: mangaInfo,
+  MangaPage: MangaPage,
   parsingManga: parsingManga,
   parsingChapter: parsingChapter,
   download: download

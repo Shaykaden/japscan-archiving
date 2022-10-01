@@ -21,7 +21,7 @@ puppeteer.use(StealthPlugin());
 
 const authorizedRessources = ['document'];
 
-const mangaInformation = {
+const MangaPagermation = {
 	url: 'https://www.japscan.ws/manga/komi-san-wa-komyushou-desu/',
 	listPathElement: '#chapters_list > div > div > a',
 };
@@ -56,7 +56,7 @@ async function parsingManga(mangas) {
 
 		await page.goto(manga.url);
 		// get the list that contained all mangas on the page
-		const chapterHandles = await page.$$(mangaInformation.listPathElement);
+		const chapterHandles = await page.$$(MangaPagermation.listPathElement);
 		// console.log(volumeHandles.length);
 		let chapterList = []
 		

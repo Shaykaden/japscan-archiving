@@ -5,7 +5,7 @@ if (false) {
 }
 const puppeteer = require('puppeteer-extra');
 
-const { mangaInfo } = require('./parser/mangaInfo');
+const { MangaPage } = require('./parser/MangaPage');
 // add stealth plugin
 const StealthPlugin = require('puppeteer-extra-plugin-stealth');
 const { initDB } = require('./utils/db-utils');
@@ -15,7 +15,7 @@ const authorizedRessources = ['script', 'document'];
 const authorizedUrl = ['//www.japscan', 'c.japscan', 'cloudflare'];
 const authorizedScript = ['axkt-htpgrw.yh.js', 'psktgixhxcv.yh.js'];
 
-const mangaInformation = {
+const MangaPagermation = {
 	url: 'https://www.japscan.ws/mangas/',
 	listPathElement: '#main > div > div.d-flex.flex-wrap.m-5 > div.p-2',
 };
@@ -46,7 +46,7 @@ puppeteer
 			}
 		});
 
-		await page.goto(mangaInformation.url);
+		await page.goto(MangaPagermation.url);
 		// get the number of pages
 		const pagesElement = await page.$( '#main > div > ul > li:nth-child(9) > a');
 		// const numberOfPages = await page.evaluate( el => el.innerHTML, pagesElement);
@@ -54,11 +54,11 @@ puppeteer
 
 		let urls = [];
 		for (let i = 1; i <= numberOfPages; i++) {
-			urls.push(mangaInformation.url + i);
+			urls.push(MangaPagermation.url + i);
 		}
 
 		console.log(`parsing ${urls.length} pages...`);
 		// parsing every page
-		mangaInfo(urls);
+		MangaPage(urls);
 		page.close();
 	});

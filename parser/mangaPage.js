@@ -9,7 +9,7 @@ const { Cluster } = require('puppeteer-cluster');
 // add stealth plugin
 const StealthPlugin = require('puppeteer-extra-plugin-stealth');
 const { addManga, addTotalManga } = require('../utils/db-utils');
-const { poolHandler } = require('./poolHandler');
+// const { poolHandler } = require('./poolHandler');
 puppeteer.use(StealthPlugin());
 
 const authorizedRessources = ['script', 'document'];
@@ -20,12 +20,12 @@ const authorizedScript = [
 	'ymdw.yuz.ve.js',
 ];
 
-const mangaInformation = {
+const MangaPagermation = {
 	url: 'https://www.japscan.ws/mangas/',
 	listPathElement: '#main > div > div.d-flex.flex-wrap.m-5 > div.p-2',
 };
 
-async function mangaInfo (urls) {
+async function MangaPage (urls) {
 	// get on every page all the manga url and add it to the db
 	// const { window } = new JSDOM();
 	// var startTime = window.performance.now();
@@ -62,7 +62,7 @@ async function mangaInfo (urls) {
 
 		await page.goto(url);
 		// get the list that contained all mangas on the page
-		const mangaHandles = await page.$$(mangaInformation.listPathElement);
+		const mangaHandles = await page.$$(MangaPagermation.listPathElement);
 
 		// for each
 		for (const manga of mangaHandles) {
@@ -108,8 +108,8 @@ async function mangaInfo (urls) {
 
 	await cluster.idle()
 		console.log('next');
-		poolHandler()
+		// poolHandler()
 	await cluster.close();
 }
 
-module.exports.mangaInfo = mangaInfo;
+module.exports.MangaPage = MangaPage;

@@ -21,7 +21,7 @@ const authorizedRessources = ['image', 'script', 'document'];
 const authorizedUrl = ['//www.japscan', 'c.japscan', 'cloudflare'];
 const prohibibedScript = ['axkt-htpgrw.yh.js'];
 
-async function parsingChapter() {
+async function parsingChapter(chapters) {
 	// const { window } = new JSDOM();
 	// console.log('Running script...');
 	// var startTime = window.performance.now();
@@ -43,7 +43,7 @@ async function parsingChapter() {
 		let pagesNumber = null;
 		let pages = {};
 
-		let state = 0
+		let state = 0;
 
 		const { window } = new JSDOM();
 		var startTime = window.performance.now();
@@ -94,7 +94,7 @@ async function parsingChapter() {
 								chapter.numero,
 								pages
 							);
-							counter += 1
+							counter += 1;
 							console.log('parsed ' + counter);
 						}
 					}
@@ -157,8 +157,7 @@ async function parsingChapter() {
 									)
 								);
 						} else {
-
-							counter += 1
+							counter += 1;
 							// console.log('skip not manga');
 						}
 					});
@@ -166,27 +165,14 @@ async function parsingChapter() {
 			.catch(err => console.log(err));
 	});
 
-
-	var counter = 0
-		getChapterToParse()
-			.then(async chapters => {
-				console.log('length ' + chapters.length);
-				if (chapters.length != 0) {
-					state = 1;
-					for (const chapter of chapters) {
-						await cluster
-							.queue(chapter)
-							.catch(err => console.log(err));
-					}
-			}})
-			.catch(err => {
-				console.log(err);
-			});
-
+	var counter = 0;
+	for (const chapter of chapters) {
+		// console.log(chapter);
+		await cluster.queue(chapter).catch(err => console.log(err));
+	}
 
 	await cluster.idle().then((state = 0));
 	await cluster.close();
-
 }
 
 module.exports.parsingChapter = parsingChapter;
