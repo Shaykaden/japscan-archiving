@@ -5,6 +5,8 @@ if (false) {
 }
 const puppeteer = require('puppeteer-extra');
 const { JSDOM } = require('jsdom');
+const JSZip = require("jszip");
+
 
 const { Cluster } = require('puppeteer-cluster');
 
@@ -174,5 +176,7 @@ async function parsingChapter(chapters) {
 	await cluster.idle().then((state = 0));
 	await cluster.close();
 }
+
+
 
 module.exports.parsingChapter = parsingChapter;

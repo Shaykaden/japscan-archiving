@@ -21,6 +21,7 @@
   "dependencies": {
     "@types/node": "^18.0.3",
     "axios": "^0.27.2",
+    "better-sqlite3": "^8.0.1",
     "bluebird": "^3.7.2",
     "config": "^3.3.7",
     "jsdom": "^20.0.0",

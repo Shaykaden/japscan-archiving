@@ -8,57 +8,46 @@ const puppeteer = require('puppeteer-extra');
 const { MangaPage } = require('./parser/MangaPage');
 // add stealth plugin
 const StealthPlugin = require('puppeteer-extra-plugin-stealth');
-const { initDB } = require('./utils/db-utils');
+const { initDB } = require('./database.js');
+const { kMaxLength } = require('buffer');
+const { isRequestAuthorized } = require('./requestHandling');
 puppeteer.use(StealthPlugin());
 
-const authorizedRessources = ['script', 'document'];
-const authorizedUrl = ['//www.japscan', 'c.japscan', 'cloudflare'];
-const authorizedScript = ['axkt-htpgrw.yh.js', 'psktgixhxcv.yh.js'];
+	
 
-const MangaPagermation = {
+const JAPSCAN_MANGA_TAB = {
 	url: 'https://www.japscan.ws/mangas/',
 	listPathElement: '#main > div > div.d-flex.flex-wrap.m-5 > div.p-2',
 };
 
+
+
 // app.js start when the application start
-puppeteer
-	.launch({
-		headless: true,
-	})
-	.then(async browser => {
-		console.log('Running script...');
+puppeteer.launch({ headless: false, devtools: true }).then(async browser => {
+	console.log('Running script...');
 
-		// init db
-		initDB()
-		const page = await browser.newPage();
+	// init db
+	initDB();
+	const page = await browser.newPage();
 
-		// only accept needed request
-		page.setRequestInterception(true);
-		page.on('request', req => {
-			if ( authorizedRessources.includes(req.resourceType()) && authorizedUrl.some(url => req.url().includes(url))) {
-				if (authorizedScript.some(script => req.url().includes(script))) {
-					req.abort();
-				} else {
-					req.continue();
-				}
-			} else {
-				req.abort();
-			}
-		});
+	// only accept needed request
+	page.setRequestInterception(true);
+	page.on('request', request => isRequestAuthorized(request));
 
-		await page.goto(MangaPagermation.url);
-		// get the number of pages
-		const pagesElement = await page.$( '#main > div > ul > li:nth-child(9) > a');
-		// const numberOfPages = await page.evaluate( el => el.innerHTML, pagesElement);
-		const numberOfPages = 1 
+	await page.goto(JAPSCAN_MANGA_TAB.url);
+	// get the number of pages
+	await page.waitForSelector('#main > div > ul > li:nth-child(9) > a')
+	const pagesElement = await page.$('#main > div > ul > li:nth-child(9) > a');
+	const numberOfPages = await page.evaluate( el => el.innerHTML, pagesElement);
+	// const numberOfPages = 5;
 
-		let urls = [];
-		for (let i = 1; i <= numberOfPages; i++) {
-			urls.push(MangaPagermation.url + i);
-		}
+	let urls = [];
+	for (let i = 1; i <= numberOfPages; i++) {
+		urls.push(JAPSCAN_MANGA_TAB.url + i);
+	}
 
-		console.log(`parsing ${urls.length} pages...`);
-		// parsing every page
-		MangaPage(urls);
-		page.close();
-	});
+	console.log(`parsing ${urls.length} pages...`);
+	// parsing every page
+	MangaPage(urls);
+	// page.close();
+});

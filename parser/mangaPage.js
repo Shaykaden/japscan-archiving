@@ -8,24 +8,21 @@ const { Cluster } = require('puppeteer-cluster');
 
 // add stealth plugin
 const StealthPlugin = require('puppeteer-extra-plugin-stealth');
-const { addManga, addTotalManga } = require('../utils/db-utils');
+const { addMangas } = require('../database.js');
+const { setMaxIdleHTTPParsers } = require('http');
+const { isRequestAuthorized } = require('../requestHandling.js');
 // const { poolHandler } = require('./poolHandler');
 puppeteer.use(StealthPlugin());
 
-const authorizedRessources = ['script', 'document'];
-const authorizedUrl = ['//www.japscan', 'c.japscan', 'cloudflare'];
-const authorizedScript = [
-	'axkt-htpgrw.yh.js',
-	'psktgixhxcv.yh.js',
-	'ymdw.yuz.ve.js',
-];
 
 const MangaPagermation = {
 	url: 'https://www.japscan.ws/mangas/',
 	listPathElement: '#main > div > div.d-flex.flex-wrap.m-5 > div.p-2',
 };
+const sleep = (ms) => new Promise(r => setTimeout(r, ms));
 
-async function MangaPage (urls) {
+
+async function MangaPage(urls) {
 	// get on every page all the manga url and add it to the db
 	// const { window } = new JSDOM();
 	// var startTime = window.performance.now();
@@ -33,35 +30,25 @@ async function MangaPage (urls) {
 	// creation of a cluster
 	const cluster = await Cluster.launch({
 		concurrency: Cluster.CONCURRENCY_PAGE,
-		maxConcurrency: 30,
+		maxConcurrency: 2,
 		puppeteer,
 		puppeteerOptions: {
-			headless: true,
+			headless: false,
+			devtools: true
 		},
 	});
 
 	await cluster.task(async ({ page, data: url }) => {
 		// only accept needed request
+		console.log(`page url: ${url}`);
+
 		page.setRequestInterception(true);
-		page.on('request', req => {
-			if (
-				authorizedRessources.includes(req.resourceType()) &&
-				authorizedUrl.some(url => req.url().includes(url))
-			) {
-				if (
-					authorizedScript.some(script => req.url().includes(script))
-				) {
-					req.abort();
-				} else {
-					req.continue();
-				}
-			} else {
-				req.abort();
-			}
-		});
+		page.on('request', request => isRequestAuthorized(request));
 
 		await page.goto(url);
 		// get the list that contained all mangas on the page
+		
+		await page.waitForSelector(MangaPagermation.listPathElement)
 		const mangaHandles = await page.$$(MangaPagermation.listPathElement);
 
 		// for each
@@ -78,37 +65,42 @@ async function MangaPage (urls) {
 			);
 
 			// add in db
-			addManga(title, url, counter);
-			counter += 1;
+
+			mangasParsed.push({
+				title: title,
+				url: url,
+			})
 		}
 		const number = url.charAt(url.length - 1);
 
-		console.log(
-			'pages ' +
-				url.charAt(url.length - 3) +
-				url.charAt(url.length - 2) +
-				number +
-				' is parsed'
-		);
 		urlParsed += 1;
 		if (urlParsed === urls.length) {
+			await addMangas(mangasParsed)
+			console.log(
+				'pages ' +
+					url.charAt(url.length - 3) +
+					url.charAt(url.length - 2) +
+					number +
+					' is parsed'
+			);
 			// var endTime = window.performance.now();
 			// console.log(
 			// 	`execution time: ${(endTime - startTime) / 1000} seconds`
 			// );
-			addTotalManga(counter);
+			//addTotalManga(counter);
 		}
 	});
 
 	var urlParsed = 0;
 	var counter = 0;
+	var mangasParsed = []
 	for (const url of urls) {
 		await cluster.queue(url);
 	}
 
-	await cluster.idle()
-		console.log('next');
-		// poolHandler()
+	await cluster.idle();
+	console.log('next');
+	// poolHandler()
 	await cluster.close();
 }
 
