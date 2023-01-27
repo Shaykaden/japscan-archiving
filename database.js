@@ -39,10 +39,10 @@ async function addMangas(mangas) {
 	const addedSuccessfuly = 0;
 
 	const insertAll = db.transaction((mangas) => {
-		for (const user of users) {
+		for (const manga of mangas) {
 			try {
 				insert.run(manga);
-				addedSuccessfuly++;
+				addedSuccessfuly+=1;
 			} catch (error) {
 				console.warn(`error on : ${manga.title}`);	
 			}

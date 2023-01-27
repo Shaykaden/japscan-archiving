@@ -1,53 +1,64 @@
-// intellisense doesn't seem to work with extra
-// this random thing work
+// intellisense doesn't seem to work with puppeteer-extra
+// but this random shit work
 if (false) {
 	const puppeteer = require('puppeteer');
 }
 const puppeteer = require('puppeteer-extra');
-
-const { MangaPage } = require('./parser/MangaPage');
-// add stealth plugin
 const StealthPlugin = require('puppeteer-extra-plugin-stealth');
-const { initDB } = require('./database.js');
-const { kMaxLength } = require('buffer');
-const { isRequestAuthorized } = require('./requestHandling');
+const AdblockerPlugin = require('puppeteer-extra-plugin-adblocker')
+const anonymizeUserAgent = require('puppeteer-extra-plugin-anonymize-ua')
 puppeteer.use(StealthPlugin());
+puppeteer.use(AdblockerPlugin({ blockTrackers: true }))
+puppeteer.use(anonymizeUserAgent({customFn: (ua) => 'MyCoolAgent/' + ua.replace('Chrome', 'Beer')}))
 
+const { initDB } = require('./database');
+const { MangaPage } = require('./parser/MangaPage');
+const { isRequestAuthorized } = require('./requestHandling');
 	
 
 const JAPSCAN_MANGA_TAB = {
 	url: 'https://www.japscan.ws/mangas/',
-	listPathElement: '#main > div > div.d-flex.flex-wrap.m-5 > div.p-2',
+	pathToElements: '#main > div > ul > li:nth-child(9) > a',
 };
 
 
+/**
+ * retrieve the number of pages that contain all mangas urls
+ * and give it to MangaPage()
+ */
+async function parseHomePage(options) {
+	puppeteer .launch(options).then(async browser => {
+		console.log('Running script...');
+		initDB();
 
-// app.js start when the application start
-puppeteer.launch({ headless: false, devtools: true }).then(async browser => {
-	console.log('Running script...');
+		const page = (await browser.pages())[0];
 
-	// init db
-	initDB();
-	const page = await browser.newPage();
+		page.setRequestInterception(true);
+		page.on('request', request => isRequestAuthorized(request));
 
-	// only accept needed request
-	page.setRequestInterception(true);
-	page.on('request', request => isRequestAuthorized(request));
+		await page.goto(JAPSCAN_MANGA_TAB.url);
 
-	await page.goto(JAPSCAN_MANGA_TAB.url);
-	// get the number of pages
-	await page.waitForSelector('#main > div > ul > li:nth-child(9) > a')
-	const pagesElement = await page.$('#main > div > ul > li:nth-child(9) > a');
-	const numberOfPages = await page.evaluate( el => el.innerHTML, pagesElement);
-	// const numberOfPages = 5;
+		await page.waitForSelector(JAPSCAN_MANGA_TAB.pathToElements);
+		const pageElements = await page.$(JAPSCAN_MANGA_TAB.pathToElements);
+		// const numberOfPages = await page.evaluate( el => el.innerHTML, pageElements);
+		const numberOfPages = 5
+		page.close()
 
-	let urls = [];
-	for (let i = 1; i <= numberOfPages; i++) {
-		urls.push(JAPSCAN_MANGA_TAB.url + i);
-	}
+		const urls = [];
+		for (let i = 1; i <= numberOfPages; i++) {
+			urls.push(JAPSCAN_MANGA_TAB.url + i);
+		}
 
-	console.log(`parsing ${urls.length} pages...`);
-	// parsing every page
-	MangaPage(urls);
-	// page.close();
-});
+		console.log(`parsing ${urls.length} pages...`);
+
+		// parsing every page
+		MangaPage(urls);
+	});
+}
+
+options = {
+	headless: false,
+	devtools: false
+}
+
+parseHomePage(options)
