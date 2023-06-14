@@ -9,22 +9,29 @@ const AdblockerPlugin = require('puppeteer-extra-plugin-adblocker')
 const anonymizeUserAgent = require('puppeteer-extra-plugin-anonymize-ua')
 puppeteer.use(StealthPlugin());
 puppeteer.use(AdblockerPlugin({ blockTrackers: true }))
-puppeteer.use(anonymizeUserAgent({customFn: (ua) => 'MyCoolAgent/' + ua.replace('Chrome', 'Beer')}))
+puppeteer.use(anonymizeUserAgent({}))
 
-const { initDB } = require('./database');
+const { initDB } = require('./utils/database');
 const { MangaPage } = require('./parser/MangaPage');
-const { isRequestAuthorized } = require('./requestHandling');
+const { isRequestAuthorized } = require('./utils/requestHandling');
 	
 
-const JAPSCAN_MANGA_TAB = {
+const JAPSCAN_HOME_TAB = {
 	url: 'https://www.japscan.ws/mangas/',
 	pathToElements: '#main > div > ul > li:nth-child(9) > a',
 };
+
+async function sleep(delay) {
+    var start = new Date().getTime();
+    while (new Date().getTime() < start + delay);
+}
+
 
 
 /**
  * retrieve the number of pages that contain all mangas urls
  * and give it to MangaPage()
+ * @param  {puppeteer_options} options puppeteer options
  */
 async function parseHomePage(options) {
 	puppeteer .launch(options).then(async browser => {
@@ -36,17 +43,18 @@ async function parseHomePage(options) {
 		page.setRequestInterception(true);
 		page.on('request', request => isRequestAuthorized(request));
 
-		await page.goto(JAPSCAN_MANGA_TAB.url);
+		await sleep(1000);
+		await page.goto(JAPSCAN_HOME_TAB.url);
 
-		await page.waitForSelector(JAPSCAN_MANGA_TAB.pathToElements);
-		const pageElements = await page.$(JAPSCAN_MANGA_TAB.pathToElements);
-		// const numberOfPages = await page.evaluate( el => el.innerHTML, pageElements);
-		const numberOfPages = 5
+		await page.waitForSelector(JAPSCAN_HOME_TAB.pathToElements);
+		const pageElements = await page.$(JAPSCAN_HOME_TAB.pathToElements);
+		const numberOfPages = await page.evaluate( el => el.innerHTML, pageElements);
+		// const numberOfPages = 1
 		page.close()
 
 		const urls = [];
 		for (let i = 1; i <= numberOfPages; i++) {
-			urls.push(JAPSCAN_MANGA_TAB.url + i);
+			urls.push(JAPSCAN_HOME_TAB.url + i);
 		}
 
 		console.log(`parsing ${urls.length} pages...`);

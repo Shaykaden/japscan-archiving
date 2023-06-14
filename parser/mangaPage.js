@@ -13,34 +13,33 @@ puppeteer.use(anonymizeUserAgent())
 
 
 const { Cluster } = require('puppeteer-cluster');
-const { addMangas } = require('../database.js');
-const { isRequestAuthorized } = require('../requestHandling.js');
+const { addMangas } = require('../utils/database.js');
+const { isRequestAuthorized } = require('../utils/requestHandling.js');
 
 
-const JAPSCAN_MANGAS_TAB = {
+const JAPSCAN_HOME_TAB = {
 	url: 'https://www.japscan.ws/mangas/',
 	pathToElements: '#main > div > div.d-flex.flex-wrap.m-5 > div.p-2',
 };
 
 
+
 /**
  * insert in database all the mangas with 
  * their titles and urls
- * @param {String[]} urls array of urls
  */
 async function MangaPage(urls) {
 	const cluster = await Cluster.launch({
 		concurrency: Cluster.CONCURRENCY_PAGE,
-		maxConcurrency: 5,
+		maxConcurrency: 8,
 		puppeteer,
+		monitor: true,
 		puppeteerOptions: {
 			headless: false,
 		},
 	});
 
 	await cluster.task(async ({ page, data: url }) => {
-		console.log(`page url: ${url}`);
-
 		page.setRequestInterception(true);
 		page.on('request', request => isRequestAuthorized(request));
 
@@ -51,7 +50,6 @@ async function MangaPage(urls) {
 			mangasParsed.push(manga);
 		})
 
-		page.close();
 	});
 
 	var mangasParsed = []
@@ -74,8 +72,8 @@ async function MangaPage(urls) {
 async function getMangasOnPage(page) {
 	const mangas = []
 
-	await page.waitForSelector(JAPSCAN_MANGAS_TAB.pathToElements);
-	const mangaElements = await page.$$(JAPSCAN_MANGAS_TAB.pathToElements);
+	await page.waitForSelector(JAPSCAN_HOME_TAB.pathToElements);
+	const mangaElements = await page.$$(JAPSCAN_HOME_TAB.pathToElements);
 
 	for (const manga of mangaElements) {
 		const title = await page.evaluate(

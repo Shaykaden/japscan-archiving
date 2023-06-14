@@ -1,5 +1,4 @@
 const Database = require('better-sqlite3');
-const db = new Database('librairy.db', {});
 
 /* DB Structure
 table :
@@ -7,6 +6,11 @@ table :
 	- Chapter : mangaTitle, numero, pagesUrl, pagesCount
 */
 
+
+/**
+ * init the database by creating the table
+ * 'manga' and 'chapter'
+ */
 function initDB() {
 	const db = new Database('librairy.db', {});
 
@@ -17,6 +21,7 @@ function initDB() {
 		`CREATE TABLE IF NOT EXISTS chapter(
 			mangaTitle TEXT,
 			numero INTEGER,
+			url TEXT,
 			pagesUrl TEXT,
 			pagesCount INTEGER,
 			PRIMARY KEY (mangaTitle, numero)
@@ -31,10 +36,13 @@ function initDB() {
 	db.close()
 }
 
-// manga attributes: title, url
+/**
+ * add serveral mangas to the database 
+ * @param {{title: String, url: String}[]} mangas arrays of object as {title, url}
+ */
 async function addMangas(mangas) {
 	const db = new Database('librairy.db', {});
-	const insert = db.prepare('INSERT INTO manga(title, url) VALUES(@title, @url)')
+	const insert = db.prepare('INSERT INTO manga(title, url) VALUES(@title, @url)');
 
 	const addedSuccessfuly = 0;
 
@@ -42,7 +50,6 @@ async function addMangas(mangas) {
 		for (const manga of mangas) {
 			try {
 				insert.run(manga);
-				addedSuccessfuly+=1;
 			} catch (error) {
 				console.warn(`error on : ${manga.title}`);	
 			}
@@ -52,66 +59,53 @@ async function addMangas(mangas) {
 	insertAll(mangas)
 
 	console.log(`db : +${addedSuccessfuly} manga, failed: ${mangas.length - addedSuccessfuly}`);
-	db.close()
+	db.close();
 }
 
-// chapter attributes: mangaTitle, numero, pagesUrl
+/**
+ * 
+ * @param {{mangaTitle: String, numero: int, pagesUrl: String[]}[]} chapters arrays of object of {mangaTitle, numero, pagesUrl} 
+ */
 function addChapters(chapters) {
 	const db = new Database('librairy.db', {});
-	const insertStmt = db.prepare('INSERT INTO chapter(mangaTitle, numero, pagesUrl, pagesCount) VALUES(@mangaTitle, @numero, @pagesUrl, @pagesCount)')
-
+	const insertStmt = db.prepare('INSERT INTO chapter(mangaTitle, numero, url) VALUES(@mangaTitle, @numero, @url)')
 
 	chapters.forEach(chapter => {
-		chapter['pagesCount'] = chapter.pagesUrl.lenght;
-		chapter['pagesUrl'] = JSON.stringify(chapter.pagesUrl);
 		try {
 			insertStmt.run(chapter)
 		} catch (error) {
 			console.warn(`error on : ${chapter.mangaTitle} ch.${chapter.numero}`);	
 		}
 	})
+
+	db.close();
 }
 
+
+/**
+ * return all the mangas that need to be parsed
+ * @return {{title: String, url: String}[]} mangas arrays of object as {title, url}
+ */
 function getMangaToParse() {
 	const db = new Database('librairy.db', { readonly: true });
 	const stmt = db.prepare('select * from manga');
 
-	return stmt.all();
+	mangas = stmt.all();
+	db.close();
+	return mangas;
 }
 
+/**
+ * return all the mangas that need to be parsed
+ * @return {{mangaTitle: String, numero: int, pagesUrl: String[]}[]} chapters arrays of object of {mangaTitle, numero, pagesUrl} 
+ */
 function getChapterToParse() {
 	const db = new Database('librairy.db', { readonly: true });
 	const stmt = db.prepare('select * from chapter');
+	chapters = stmt.all()
+	db.close();
 
-	return stmt.all();
+	return chapters;
 }
 
-
-const mangas = [
-	{
-		title: "pokemon",
-		url: 'url:test'
-	},
-	{
-		title: "beyblades",
-		url: 'url:oui'
-	},
-]
-
-//	- Chapter : mangaTitle, numero, pagesUrl, pagesCount
-const chapters = [
-	{
-		mangaTitle: "pokemon",
-		numero: 3,
-		pagesUrl: ['url:1', 'url:2']
-	},
-	{
-		mangaTitle: "pokemon",
-		numero: 4,
-		pagesUrl: ['url:1', 'url:2', 'url:3']
-	}
-]
-
-
-// sql
-module.exports = { initDB, addMangas, addChapters };
+module.exports = { initDB, addMangas, addChapters, getMangaToParse, getChapterToParse };

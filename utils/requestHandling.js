@@ -41,4 +41,38 @@ function isRequestAuthorized(request) {
 	}
 }
 
-module.exports = {isRequestAuthorized}
+function getImages(request) {
+
+		let pages = {};
+	index = 0;
+		if (['image'].includes(request.resourceType())) {
+			pages[`${index}`] = request.url();
+			// index += 1;
+
+			// if not the first page check if it's the last page
+			// if (pagesNumber != null) {
+			// 	if (index <= pagesNumber) {
+			// 		await page
+			// 			.goto(chapter.url + index + '.html', {
+			// 				timeout: config.timeout,
+			// 			})
+			// 			.catch(err => {
+			// 				console.log(err);
+			// 			});
+			// 	} else {
+			// 		// console.log('update in db');
+			// 		updateAddChapterImagesUrl(
+			// 			chapter.mangaId,
+			// 			chapter.numero,
+			// 			pages
+			// 		);
+			// 		counter += 1;
+			// 		console.log('parsed ' + counter);
+			// 	}
+			// }
+			console.log(`url ${request.url()}`);
+			// req.abort();
+		}
+}
+
+module.exports = {isRequestAuthorized, getImages}

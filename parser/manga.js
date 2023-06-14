@@ -6,91 +6,92 @@ if (false) {
 	const puppeteer = require('puppeteer');
 }
 const puppeteer = require('puppeteer-extra');
-const { JSDOM } = require('jsdom');
-
-const { Cluster } = require('puppeteer-cluster');
-
-const sqlite3 = require('sqlite3');
-const config = require('config');
-
-
-// add stealth plugin
 const StealthPlugin = require('puppeteer-extra-plugin-stealth');
-const { addChapters, addManga } = require('../utils/db-utils');
+const AdblockerPlugin = require('puppeteer-extra-plugin-adblocker')
+const anonymizeUserAgent = require('puppeteer-extra-plugin-anonymize-ua')
 puppeteer.use(StealthPlugin());
+puppeteer.use(AdblockerPlugin({ blockTrackers: true }))
+puppeteer.use(anonymizeUserAgent({}))
+
+const { JSDOM } = require('jsdom');
+const { Cluster } = require('puppeteer-cluster');
+const { getMangaToParse, addChapters } = require('../utils/database');
+const { isRequestAuthorized } = require('../utils/requestHandling');
+const { setMaxIdleHTTPParsers } = require('http');
 
 const authorizedRessources = ['document'];
 
-const MangaPagermation = {
+const JAPSCAN_MANGA_TAB = {
 	url: 'https://www.japscan.ws/manga/komi-san-wa-komyushou-desu/',
-	listPathElement: '#chapters_list > div > div > a',
+	pathToElements: '#chapters_list > div > div > a',
 };
 
-async function parsingManga(mangas) {
 
+/**
+ * insert in database all the chapters with 
+ * their mangaTitles, numeros and urls
+ */
+async function parsingManga() {
 	console.log('parsing manga...');
-	// console.log(mangas);
-	const { window } = new JSDOM();
-	var startTime = window.performance.now();
 
-	// creation of a cluster
 	const cluster = await Cluster.launch({
 		concurrency: Cluster.CONCURRENCY_PAGE,
-		maxConcurrency: 10,
+		maxConcurrency: 8,
 		puppeteer,
+		monitor: true,
 		puppeteerOptions: {
-			headless: true,
+			headless: false,
+			devtools: false,
 		},
 	});
 
 	await cluster.task(async ({ page, data: manga }) => {
 		// only accept needed request
 		page.setRequestInterception(true);
-		page.on('request', req => {
-			if (authorizedRessources.includes(req.resourceType())) {
-				req.continue();
-			} else {
-				req.abort();
-			}
-		});
+		page.on('request', request => isRequestAuthorized(request));
 
 		await page.goto(manga.url);
-		// get the list that contained all mangas on the page
-		const chapterHandles = await page.$$(MangaPagermation.listPathElement);
-		// console.log(volumeHandles.length);
-		let chapterList = []
-		
-		for (const chapter of chapterHandles) {
-			const url = await chapter.evaluate(item => item.href, chapter);
-			chapCounter += 1
-			console.log(chapCounter + ' ' + url);
 
-			const splittedUrl = url.split('/');
-			const numero = splittedUrl[splittedUrl.length - 2];
-			chapterList.push([numero, url, manga.mangaId, null, null]);
-		}
+		const chapterList = await getChaptersOnPage(page, manga)
 		
 		addChapters(chapterList)
-		counter += 1;
-
-		// console.log('counter :' +counter);
-		if (counter === manga.length) {
-			var endTime = window.performance.now();
-			console.log(
-				`execution time: ${(endTime - startTime) / 1000} seconds`
-			);
-		}
+		
 	});
 
-	var counter = 0;
-	var chapCounter = 0;
-	// console.log(mangas.length);
+	const mangas = getMangaToParse()
 	for (const manga of mangas) {
 		await cluster.queue(manga);
 	}
 
 	await cluster.idle();
-	await cluster.close();
+	await cluster.close().then(console.log('finish'));
 }
+
+
+/**
+ * Get and return an object describing a chapter without the chapters pageUrls
+ * @param {puppeteer.Page} page puppeteer page 
+ * @returns {{mangaTitle, numero, url}[]} arrays of object as { mangaTitle, numero, url }[]
+ */
+async function getChaptersOnPage(page, currentManga) {
+	const mangaTitle = currentManga.title
+
+	await page.waitForSelector(JAPSCAN_MANGA_TAB.pathToElements);
+	const chapterElements = await page.$$(JAPSCAN_MANGA_TAB.pathToElements);
+
+	const chapters = []
+	for (const chapter of chapterElements) {
+		const url = await chapter.evaluate(element => element.href, chapter);
+
+		const splittedUrl = url.split('/');
+		const numero = splittedUrl[splittedUrl.length - 2];
+	
+		chapters.push({ mangaTitle: mangaTitle, numero: numero, url: url });
+	}
+
+	return chapters;
+}
+
+parsingManga();
 
 module.exports.parsingManga = parsingManga;

@@ -4,179 +4,222 @@ if (false) {
 	const puppeteer = require('puppeteer');
 }
 const puppeteer = require('puppeteer-extra');
-const { JSDOM } = require('jsdom');
-const JSZip = require("jszip");
-
-
-const { Cluster } = require('puppeteer-cluster');
-
-// add stealth plugin
 const StealthPlugin = require('puppeteer-extra-plugin-stealth');
-const {
-	updateAddChapterImagesUrl,
-	getChapterToParse,
-} = require('../utils/db-utils');
-const config = require('config');
+const AdblockerPlugin = require('puppeteer-extra-plugin-adblocker');
+const anonymizeUserAgent = require('puppeteer-extra-plugin-anonymize-ua');
 puppeteer.use(StealthPlugin());
+puppeteer.use(AdblockerPlugin({ blockTrackers: true }));
+puppeteer.use(
+	anonymizeUserAgent({
+		customFn: ua => 'MyCoolAgent/' + ua.replace('Chrome', 'Beer'),
+	})
+);
 
-const authorizedRessources = ['image', 'script', 'document'];
-const authorizedUrl = ['//www.japscan', 'c.japscan', 'cloudflare'];
-const prohibibedScript = ['axkt-htpgrw.yh.js'];
+const { isRequestAuthorized } = require('../utils/requestHandling');
+const { getChapterToParse } = require('../utils/database');
+const { Cluster } = require('puppeteer-cluster');
+const config = require('config');
+const JSZip = require('jszip');
+const fs = require('fs');
+const { request } = require('https');
+const path = require('path');
+const { setIntervalAsync } = require('set-interval-async');
 
-async function parsingChapter(chapters) {
-	// const { window } = new JSDOM();
-	// console.log('Running script...');
-	// var startTime = window.performance.now();
-	console.log('parsing chapter...');
+function sleep(ms) {
+	return new Promise(resolve => setTimeout(resolve, ms));
+}
 
-	// creation of a cluster
-	const cluster = await Cluster.launch({
+const clusterOptions = {
 		concurrency: Cluster.CONCURRENCY_PAGE,
 		maxConcurrency: 10,
 		puppeteer,
-		timeout: 86400000, // 10 days, because 10 days
+		retryLimit: 1,
+		timeout: 120000, // TODO: 2min, set in config file
+		monitor: true,
 		puppeteerOptions: {
-			headless: true,
+			headless: false,
 		},
-	});
-
-	await cluster.task(async ({ page, data: chapter }) => {
-		let index = 1;
-		let pagesNumber = null;
-		let pages = {};
-
-		let state = 0;
-
-		const { window } = new JSDOM();
-		var startTime = window.performance.now();
-
-		// console.log('loop');
-
-		// console.log(chapter.url);
-		// only accept needed request and go to next page if it's the chapter's image
-		page.setRequestInterception(true);
-		page.on('request', async req => {
-			if (
-				authorizedRessources.includes(req.resourceType()) &&
-				authorizedUrl.some(url => req.url().includes(url))
-			) {
-				if (['image'].includes(req.resourceType())) {
-					pages[`${index}`] = req.url();
-					index += 1;
-					// console.log('pages: ' + index);
-
-					// if not the first page check if it's the last page
-					if (pagesNumber != null) {
-						if (index <= pagesNumber) {
-							await page
-								.goto(chapter.url + index + '.html', {
-									timeout: config.timeout,
-								})
-								.catch(err => {
-									var endTime = window.performance.now();
-									console.log(
-										`execution time: ${
-											(endTime - startTime) / 1000
-										} seconds`
-									);
-									console.log(
-										`url that crash ${
-											chapter.url + index + '.html'
-										}, err ${err}`
-									);
-								});
-						} else {
-							// console.log(
-							// 	`index ${index}, pagesNumber ${pagesNumber}`
-							// );
-
-							// console.log('update in db');
-							updateAddChapterImagesUrl(
-								chapter.mangaId,
-								chapter.numero,
-								pages
-							);
-							counter += 1;
-							console.log('parsed ' + counter);
-						}
-					}
-					req.abort();
-				} else {
-					if (
-						prohibibedScript.some(script =>
-							req.url().includes(script)
-						)
-					) {
-						req.abort();
-					} else {
-						req.continue();
-					}
-				}
-			} else {
-				req.abort();
-			}
-		});
-
-		await page
-			.goto(chapter.url + index + '.html', {
-				waitUntil: 'domcontentloaded',
-				timeout: config.timeout,
-			})
-			.then(async () => {
-				pageSelector = await page.$(
-					'body > div.container.mt-4 > div:nth-child(1) > div.rounded-0.card-body > div'
-				);
-				const mangaType = await page.$(
-					'body > div.container.mt-4 > div:nth-child(1) > div.rounded-0.card-body > div > p:nth-child(1) > span'
-				);
-				await page
-					.evaluate(el => el.lastChild.textContent, mangaType)
-					.then(async type => {
-						if (type === 'Manga') {
-							const element = (
-								await page.$x(
-									'//span[text()="Nombre De Pages"]'
-								)
-							)[0];
-							await page
-								.evaluate(
-									el =>
-										el.parentElement.textContent.split(' '),
-									element
-								)
-								.then(async number => {
-									pagesNumber = number[number.length - 1];
-									if (pagesNumber > 1) {
-										await page.goto(
-											chapter.url + index + '.html',
-											{ timeout: config.timeout }
-										);
-									}
-								})
-								.catch(err =>
-									console.log(
-										`error: failed to find number of pages on chapter ${chapter.url} ${err}`
-									)
-								);
-						} else {
-							counter += 1;
-							// console.log('skip not manga');
-						}
-					});
-			})
-			.catch(err => console.log(err));
-	});
-
-	var counter = 0;
-	for (const chapter of chapters) {
-		// console.log(chapter);
-		await cluster.queue(chapter).catch(err => console.log(err));
 	}
 
+async function parsingChapter() {
+	const chapters = getChapterToParse();
+	console.log('parsing chapter...');
+
+	// creation of a cluster
+	const cluster = await Cluster.launch(clusterOptions);
+	// const cluster2 = await Cluster.launch(clusterOptions);
+	// const cluster3 = await Cluster.launch(clusterOptions);
+	// const cluster4 = await Cluster.launch(clusterOptions);
+
+	await cluster.task(clusterTask);
+	// await cluster2.task(clusterTask)
+	// await cluster3.task(clusterTask)
+	// await cluster4.task(clusterTask)
+
+
+	var counter = 1;
+	// console.log(chapters);
+	for (const chapter of chapters) {
+		// if (counter == 1) {
+			await cluster.queue(chapter).catch(err => console.log(err));
+		// }
+		// else if (counter == 2){
+		// 	await cluster3.queue(chapter).catch(err => console.log(err));
+		// }
+		// else if (counter == 3){
+		// 	await cluster2.queue(chapter).catch(err => console.log(err));
+		// 	counter = 0
+		// }
+		// counter++
+	}
+
+	cluster.on('taskerror', (err, data, willRetry) => {
+		if (willRetry) {
+			console.warn(`Encountered an error while crawling ${data}. ${err.message}\nThis job will be retried`);
+		} else {
+			console.error(`Failed to crawl ${data}: ${err.message}`);
+		}
+	});
+	// cluster2.on('taskerror', (err, data, willRetry) => {
+	// 	if (willRetry) {
+	// 		console.warn(`Encountered an error while crawling ${data}. ${err.message}\nThis job will be retried`);
+	// 	} else {
+	// 		console.error(`Failed to crawl ${data}: ${err.message}`);
+	// 	}
+	// });
+
+	// cluster3.on('taskerror', (err, data, willRetry) => {
+	// 	if (willRetry) {
+	// 		console.warn(`Encountered an error while crawling ${data}. ${err.message}\nThis job will be retried`);
+	// 	} else {
+	// 		console.error(`Failed to crawl ${data}: ${err.message}`);
+	// 	}
+	// });
 	await cluster.idle().then((state = 0));
-	await cluster.close();
+	await cluster.close().then(() => {
+		console.log('finish');
+	});
+	// await cluster2.idle().then((state = 0));
+	// await cluster2.close().then(() => {
+	// 	console.log('finish');
+	// });
+	// await cluster3.idle().then((state = 0));
+	// await cluster3.close().then(() => {
+	// 	console.log('finish');
+	// });
+
+
+}
+
+	async function filterImages(request) {
+		let pages = {};
+		index = 0;
+		if (['image'].includes(request.resourceType())) {
+			url = request.url();
+			keyword = 'japscan';
+			pages[`${index}`] = request.url();
+			if (
+				url.includes(keyword) &&
+				!url.includes('favicon') &&
+				!url.includes('cdn-cgi') &&
+				!url.includes('imgs')
+			) {
+
+				const response = await request.response();
+				// console.log(response);
+			}
+		}
+	}
+
+	async function downloadImage(response, chapter) {}
+function createRepertories(chapter) {
+	chapterTitle = formatTitle(chapter.mangaTitle);
+	chapterNumero = chapter.numero;
+
+	const directoryPath = path.resolve(
+		__dirname,
+		'..',
+		'archive',
+		`${chapterTitle}`,
+		`ch.${chapterNumero}`
+	);
+
+	fs.mkdirSync(directoryPath, { recursive: true });
+}
+
+function formatTitle(title) {
+	const formatRules = [
+		[/"/g, '-'],
+		[/<|>|:|\\|\/|\||\?/g, '_'],
+		[/\./g, '[.]'],
+	];
+
+	formatRules.forEach(formatItem => {
+		title = title.replace(formatItem[0], formatItem[1]);
+	}); // Expected output: "The quick brown fox jumps over the lazy ferret. If the dog reacted, was it really lazy?"
+
+	return title;
+}
+
+function isImage(url) {
+	isAnImage = !url.includes('imgs') && (url.endsWith('.png') || url.endsWith('.jpg'));
+	isRequestByJapscan = url.includes('japscan') ;
+	IsRandomThing= url.includes('favicon') || url.includes('cdn-cgi');
+
+	return isAnImage && isRequestByJapscan && !IsRandomThing;
 }
 
 
+async function clusterTask({ page, data: chapter }) {
+	let pagesNumber = 0;
+	let imageIndex = 0;
+	let imageDownloaded = 0;
+
+	createRepertories(chapter);
+
+	page.setRequestInterception(true);
+
+	// TODO: checkk https://www.japscan.me/lecture-en-ligne/10-years-in-friend-zone/1/1.html
+	// one page but manhwa ?
+
+	page.on('request', request => filterImages(request, imageIndex));
+	page.on('response', async response => {
+		const url = response.url();
+		if (isImage(url)) {
+			imageIndex += 1;
+
+			const filePath = path.resolve(
+				__dirname,
+				'..',
+				'archive',
+				`${formatTitle(chapter.mangaTitle)}`,
+				`ch.${chapter.numero}`,
+				`${imageIndex}.jpg`
+			);
+			const buffer = await response.buffer();
+			fs.writeFileSync(filePath, buffer);
+			imageDownloaded += 1;
+		}
+	});
+
+	// page.on('request', request => isRequestAuthorized(request))
+	// const testurl = 'https://www.japscan.me/lecture-en-ligne/090-eko-to-issho/11/'
+	await page.goto(chapter.url);
+	// TODO: check nbpages puis si tout télécharger go next
+	
+	await page.waitForSelector('#pages');
+	const informationDiv = await page.$('#pages');
+	// try {
+	information = await page.evaluate(el => el.lastChild.innerHTML.split(' '), informationDiv);
+	pagesNumber = parseInt(information[information.length - 1]);
+
+
+	while (pagesNumber != imageDownloaded) {
+		await sleep(100);
+	}
+};
+
+
+parsingChapter();
 
 module.exports.parsingChapter = parsingChapter;
