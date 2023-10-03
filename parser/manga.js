@@ -36,12 +36,13 @@ async function parsingManga() {
 
 	const cluster = await Cluster.launch({
 		concurrency: Cluster.CONCURRENCY_PAGE,
-		maxConcurrency: 8,
+		maxConcurrency: 5,
 		puppeteer,
 		monitor: true,
 		puppeteerOptions: {
-			headless: false,
+			headless: "new",
 			devtools: false,
+      executablePath: "/run/current-system/sw/bin/google-chrome-stable"
 		},
 	});
 

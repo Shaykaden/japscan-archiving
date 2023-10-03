@@ -7,9 +7,9 @@ const AUTHORIZED_TYPES = [
 ];
 const AUTHORIZED_URLS = ['//www.japscan', 'c.japscan', 'japscan','cloudflare'];
 const AUTHORIZED_SCRIPT = [
-	'axkt-htpgrw.yh.js',
-	'psktgixhxcv.yh.js',
-	'ymdw.yuz.ve.js',
+	//'axkt-htpgrw.yh.js',
+	//'psktgixhxcv.yh.js',
+	//'ymdw.yuz.ve.js',
 ];
 
 function isIniatitorTypeParser(request) {

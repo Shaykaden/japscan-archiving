@@ -9,21 +9,15 @@ const AdblockerPlugin = require('puppeteer-extra-plugin-adblocker');
 const anonymizeUserAgent = require('puppeteer-extra-plugin-anonymize-ua');
 puppeteer.use(StealthPlugin());
 puppeteer.use(AdblockerPlugin({ blockTrackers: true }));
-puppeteer.use(
-	anonymizeUserAgent({
-		customFn: ua => 'MyCoolAgent/' + ua.replace('Chrome', 'Beer'),
-	})
-);
+puppeteer.use(anonymizeUserAgent({}))
 
 const { isRequestAuthorized } = require('../utils/requestHandling');
 const { getChapterToParse } = require('../utils/database');
 const { Cluster } = require('puppeteer-cluster');
 const config = require('config');
-const JSZip = require('jszip');
 const fs = require('fs');
 const { request } = require('https');
 const path = require('path');
-const { setIntervalAsync } = require('set-interval-async');
 
 function sleep(ms) {
 	return new Promise(resolve => setTimeout(resolve, ms));
@@ -31,13 +25,14 @@ function sleep(ms) {
 
 const clusterOptions = {
 		concurrency: Cluster.CONCURRENCY_PAGE,
-		maxConcurrency: 10,
+		maxConcurrency: 9,
 		puppeteer,
 		retryLimit: 1,
 		timeout: 120000, // TODO: 2min, set in config file
 		monitor: true,
 		puppeteerOptions: {
-			headless: false,
+			headless: 'new',
+      executablePath: "/run/current-system/sw/bin/google-chrome-stable"
 		},
 	}
 

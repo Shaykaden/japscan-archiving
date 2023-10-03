@@ -12,7 +12,7 @@ puppeteer.use(AdblockerPlugin({ blockTrackers: true }))
 puppeteer.use(anonymizeUserAgent({}))
 
 const { initDB } = require('./utils/database');
-const { MangaPage } = require('./parser/MangaPage');
+const { MangaPage } = require('./parser/mangaPage');
 const { isRequestAuthorized } = require('./utils/requestHandling');
 	
 
@@ -34,7 +34,7 @@ async function sleep(delay) {
  * @param  {puppeteer_options} options puppeteer options
  */
 async function parseHomePage(options) {
-	puppeteer .launch(options).then(async browser => {
+	puppeteer.launch(options).then(async browser => {
 		console.log('Running script...');
 		initDB();
 
@@ -65,8 +65,9 @@ async function parseHomePage(options) {
 }
 
 options = {
-	headless: false,
-	devtools: false
+	headless: "new",
+	devtools: false,
+  executablePath: "/run/current-system/sw/bin/google-chrome-stable"
 }
 
 parseHomePage(options)

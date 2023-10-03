@@ -19,7 +19,8 @@ const { isRequestAuthorized } = require('../utils/requestHandling.js');
 
 const JAPSCAN_HOME_TAB = {
 	url: 'https://www.japscan.ws/mangas/',
-	pathToElements: '#main > div > div.d-flex.flex-wrap.m-5 > div.p-2',
+	pathToElements: '#main > div > div.d-flex.flex-wrap.m-2 > div.p-2',
+	//pathToElements: '#main > div > div.d-flex.flex-wrap.m-5 > div.p-2',
 };
 
 
@@ -34,8 +35,10 @@ async function MangaPage(urls) {
 		maxConcurrency: 8,
 		puppeteer,
 		monitor: true,
+    timeout: 9999999,
 		puppeteerOptions: {
-			headless: false,
+			headless: "new",
+      executablePath: "/run/current-system/sw/bin/google-chrome-stable"
 		},
 	});
 
@@ -60,7 +63,7 @@ async function MangaPage(urls) {
 	await cluster.idle();
 	await cluster.close().then(async () => {
 		await addMangas(mangasParsed)
-		console.log( ` => ${urls.length} have been parsed`);}
+		console.log( ` => ${urls.length} pages have been parsed`);}
 	);
 }
 

@@ -44,14 +44,15 @@ async function addMangas(mangas) {
 	const db = new Database('librairy.db', {});
 	const insert = db.prepare('INSERT INTO manga(title, url) VALUES(@title, @url)');
 
-	const addedSuccessfuly = 0;
+	let addedSuccessfuly = 0;
 
 	const insertAll = db.transaction((mangas) => {
 		for (const manga of mangas) {
 			try {
 				insert.run(manga);
+        addedSuccessfuly += 1;
 			} catch (error) {
-				console.warn(`error on : ${manga.title}`);	
+				console.warn(`error on : ${manga.title}, error ${error}`);	
 			}
 		}
 	});
@@ -74,7 +75,7 @@ function addChapters(chapters) {
 		try {
 			insertStmt.run(chapter)
 		} catch (error) {
-			console.warn(`error on : ${chapter.mangaTitle} ch.${chapter.numero}`);	
+			console.warn(`error on : ${chapter.mangaTitle} ch.${chapter.numero}, error: ${error}`);	
 		}
 	})
 
