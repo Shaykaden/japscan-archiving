@@ -9,47 +9,42 @@ const AdblockerPlugin = require('puppeteer-extra-plugin-adblocker')
 const anonymizeUserAgent = require('puppeteer-extra-plugin-anonymize-ua')
 puppeteer.use(StealthPlugin());
 puppeteer.use(AdblockerPlugin({ blockTrackers: true }))
-puppeteer.use(anonymizeUserAgent({}))
+puppeteer.use(anonymizeUserAgent())
+
 
 const { initDB } = require('./utils/database');
-const { MangaPage } = require('./parser/mangaPage');
+const { MangaLibrairy } = require('./parser/mangaLibrairy');
+const { prompt_creation_librairie } = require('./utils/prompt')
 const { isRequestAuthorized } = require('./utils/requestHandling');
 	
+const config = require('config');
 
-const JAPSCAN_HOME_TAB = {
-	url: 'https://www.japscan.ws/mangas/',
-	pathToElements: '#main > div > ul > li:nth-child(9) > a',
-};
-
-async function sleep(delay) {
-    var start = new Date().getTime();
-    while (new Date().getTime() < start + delay);
-}
-
-
+const JAPSCAN_HOME_TAB = config.get('japscan.home');
+const PUPPETEER_CONFIG = config.get('browser');
 
 /**
- * retrieve the number of pages that contain all mangas urls
- * and give it to MangaPage()
+ * retrieve the number of pages that contain the mangas urls
+ * and give it to MangaLibrairy()
  * @param  {puppeteer_options} options puppeteer options
  */
 async function parseHomePage(options) {
 	puppeteer.launch(options).then(async browser => {
-		console.log('Running script...');
+    prompt_creation_librairie()
 		initDB();
+
+    console.log(`   => Extraction de Japscan...`);
 
 		const page = (await browser.pages())[0];
 
 		page.setRequestInterception(true);
 		page.on('request', request => isRequestAuthorized(request));
 
-		await sleep(1000);
 		await page.goto(JAPSCAN_HOME_TAB.url);
 
-		await page.waitForSelector(JAPSCAN_HOME_TAB.pathToElements);
-		const pageElements = await page.$(JAPSCAN_HOME_TAB.pathToElements);
-		const numberOfPages = await page.evaluate( el => el.innerHTML, pageElements);
-		// const numberOfPages = 1
+		await page.waitForSelector(JAPSCAN_HOME_TAB.pathToPageNumber);
+		const pageElement = await page.$(JAPSCAN_HOME_TAB.pathToPageNumber);
+		// const numberOfPages = await page.evaluate( el => el.innerHTML, pageElement);
+		const numberOfPages = 5
 		page.close()
 
 		const urls = [];
@@ -57,17 +52,17 @@ async function parseHomePage(options) {
 			urls.push(JAPSCAN_HOME_TAB.url + i);
 		}
 
-		console.log(`parsing ${urls.length} pages...`);
+    console.log(`   => Sauvegarde des ${urls.length} pages de la librairie...`);
 
 		// parsing every page
-		MangaPage(urls);
+		MangaLibrairy(urls);
 	});
 }
 
 options = {
-	headless: "new",
-	devtools: false,
-  executablePath: "/run/current-system/sw/bin/google-chrome-stable"
+	headless: PUPPETEER_CONFIG.isHeadless,
+	devtools: PUPPETEER_CONFIG.showDevtools,
+  executablePath: PUPPETEER_CONFIG.executablePath
 }
 
 parseHomePage(options)

@@ -13,36 +13,34 @@ puppeteer.use(StealthPlugin());
 puppeteer.use(AdblockerPlugin({ blockTrackers: true }))
 puppeteer.use(anonymizeUserAgent({}))
 
-const { JSDOM } = require('jsdom');
 const { Cluster } = require('puppeteer-cluster');
-const { getMangaToParse, addChapters } = require('../utils/database');
+const { prompt_parse_manga, prompt_start_log, prompt_end_log } = require('../utils/prompt')
+const { getMangaToParse, addChapters, getChapterToParse } = require('../utils/database');
 const { isRequestAuthorized } = require('../utils/requestHandling');
-const { setMaxIdleHTTPParsers } = require('http');
-
 const authorizedRessources = ['document'];
 
-const JAPSCAN_MANGA_TAB = {
-	url: 'https://www.japscan.ws/manga/komi-san-wa-komyushou-desu/',
-	pathToElements: '#chapters_list > div > div > a',
-};
+const config = require('config');
 
+const CLUSTER_CONFIG = config.get('cluster.parser'); 
+const PUPPETEER_CONFIG = config.get('browser');
+const JAPSCAN_MANGA_TAB = config.get('japscan.manga')
 
 /**
  * insert in database all the chapters with 
  * their mangaTitles, numeros and urls
  */
 async function parsingManga() {
-	console.log('parsing manga...');
-
 	const cluster = await Cluster.launch({
 		concurrency: Cluster.CONCURRENCY_PAGE,
-		maxConcurrency: 5,
+		maxConcurrency: CLUSTER_CONFIG.maxConcurrency,
+    retryLimit: CLUSTER_CONFIG.retryLimit,
+    timeout: CLUSTER_CONFIG.timeout,
 		puppeteer,
 		monitor: true,
 		puppeteerOptions: {
-			headless: "new",
-			devtools: false,
-      executablePath: "/run/current-system/sw/bin/google-chrome-stable"
+			headless: PUPPETEER_CONFIG.isHeadless,
+      devtools: PUPPETEER_CONFIG.showDevtools,
+      executablePath: PUPPETEER_CONFIG.executablePath
 		},
 	});
 
@@ -59,13 +57,21 @@ async function parsingManga() {
 		
 	});
 
+  prompt_parse_manga();
+  prompt_start_log();
+
 	const mangas = getMangaToParse()
 	for (const manga of mangas) {
 		await cluster.queue(manga);
 	}
 
 	await cluster.idle();
-	await cluster.close().then(console.log('finish'));
+	await cluster.close().then(() => {
+    prompt_end_log();
+    const chapterCount = getChapterToParse().length;
+    console.log(`   => identification de ${chapterCount} chapitres sur Japscan...`)
+    console.log(`   => ajout de ${chapterCount} chapitres avec succes...`)
+  });
 }
 
 
@@ -77,8 +83,8 @@ async function parsingManga() {
 async function getChaptersOnPage(page, currentManga) {
 	const mangaTitle = currentManga.title
 
-	await page.waitForSelector(JAPSCAN_MANGA_TAB.pathToElements);
-	const chapterElements = await page.$$(JAPSCAN_MANGA_TAB.pathToElements);
+	await page.waitForSelector(JAPSCAN_MANGA_TAB.pathToChapterList);
+	const chapterElements = await page.$$(JAPSCAN_MANGA_TAB.pathToChapterList);
 
 	const chapters = []
 	for (const chapter of chapterElements) {

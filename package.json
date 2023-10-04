@@ -4,7 +4,10 @@
   "description": "",
   "main": "app.js",
   "scripts": {
-    "start": "app"
+    "start": "node app ; node parser/mangaChapters ; node parser/downloadChapters",
+    "manga": "node app",
+    "chapter": "node parser/mangaChapters",
+    "dowload": "node parser/dowloadChapters"
   },
   "author": "Shaykaden",
   "license": "ISC",

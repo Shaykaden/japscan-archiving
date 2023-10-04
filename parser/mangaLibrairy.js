@@ -14,14 +14,15 @@ puppeteer.use(anonymizeUserAgent())
 
 const { Cluster } = require('puppeteer-cluster');
 const { addMangas } = require('../utils/database.js');
+const { prompt_parse_librairy, prompt_start_log } = require('../utils/prompt')
 const { isRequestAuthorized } = require('../utils/requestHandling.js');
 
 
-const JAPSCAN_HOME_TAB = {
-	url: 'https://www.japscan.ws/mangas/',
-	pathToElements: '#main > div > div.d-flex.flex-wrap.m-2 > div.p-2',
-	//pathToElements: '#main > div > div.d-flex.flex-wrap.m-5 > div.p-2',
-};
+const config = require('config');
+
+const JAPSCAN_HOME_TAB = config.get('japscan.home');
+const CLUSTER_CONFIG = config.get('cluster.parser'); 
+const PUPPETEER_CONFIG = config.get('browser');
 
 
 
@@ -29,18 +30,21 @@ const JAPSCAN_HOME_TAB = {
  * insert in database all the mangas with 
  * their titles and urls
  */
-async function MangaPage(urls) {
+async function MangaLibrairy(urls) {
 	const cluster = await Cluster.launch({
 		concurrency: Cluster.CONCURRENCY_PAGE,
-		maxConcurrency: 8,
+		maxConcurrency: CLUSTER_CONFIG.maxConcurrency,
+    retryLimit: CLUSTER_CONFIG.retryLimit,
+    timeout: CLUSTER_CONFIG.timeout,
 		puppeteer,
 		monitor: true,
-    timeout: 9999999,
 		puppeteerOptions: {
-			headless: "new",
-      executablePath: "/run/current-system/sw/bin/google-chrome-stable"
+			headless: PUPPETEER_CONFIG.isHeadless,
+      devtools: PUPPETEER_CONFIG.showDevtools,
+      executablePath: PUPPETEER_CONFIG.executablePath
 		},
 	});
+
 
 	await cluster.task(async ({ page, data: url }) => {
 		page.setRequestInterception(true);
@@ -55,6 +59,10 @@ async function MangaPage(urls) {
 
 	});
 
+  prompt_parse_librairy();
+  prompt_start_log();
+
+
 	var mangasParsed = []
 	for (const url of urls) {
 		await cluster.queue(url);
@@ -62,9 +70,8 @@ async function MangaPage(urls) {
 
 	await cluster.idle();
 	await cluster.close().then(async () => {
-		await addMangas(mangasParsed)
-		console.log( ` => ${urls.length} pages have been parsed`);}
-	);
+    await addMangas(mangasParsed)
+  });
 }
 
 /**
@@ -75,8 +82,8 @@ async function MangaPage(urls) {
 async function getMangasOnPage(page) {
 	const mangas = []
 
-	await page.waitForSelector(JAPSCAN_HOME_TAB.pathToElements);
-	const mangaElements = await page.$$(JAPSCAN_HOME_TAB.pathToElements);
+	await page.waitForSelector(JAPSCAN_HOME_TAB.pathToMangasElements);
+	const mangaElements = await page.$$(JAPSCAN_HOME_TAB.pathToMangasElements);
 
 	for (const manga of mangaElements) {
 		const title = await page.evaluate(
@@ -94,4 +101,4 @@ async function getMangasOnPage(page) {
 	return mangas;
 }
 
-module.exports.MangaPage = MangaPage;
+module.exports.MangaLibrairy = MangaLibrairy;

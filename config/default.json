@@ -1,0 +1,31 @@
+{
+  "japscan": {
+    "home" : {
+      "url": "https://www.japscan.ws/mangas/",
+      "pathToPageNumber": "#main > div > ul > li:nth-child(9) > a",
+      "pathToMangasElements": "#main > div > div.d-flex.flex-wrap.m-2 > div.p-2"
+    },
+    "manga": {
+      "pathToChapterList": "#chapters_list > div > div > a"
+    }
+  },
+
+  "browser": {
+    "executablePath": "/run/current-system/sw/bin/google-chrome-stable",
+    "isHeadless": "new",
+    "showDevtools": "false"
+  },
+
+  "cluster": {
+    "parser": {
+      "maxConcurrency": 8,
+      "timeout": 60000,
+      "retryLimit": 2
+    },
+    "dowloader": {
+      "maxConcurrency": 4,
+      "timeout": 120000, 
+      "retryLimit": 2
+    }
+  }
+}

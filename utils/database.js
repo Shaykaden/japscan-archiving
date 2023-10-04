@@ -1,5 +1,7 @@
 const Database = require('better-sqlite3');
 
+const { prompt_end_log } = require('../utils/prompt')
+
 /* DB Structure
 table :
 	- Manga : title, url
@@ -33,6 +35,9 @@ function initDB() {
 		prepare.run();
 	});
 
+  console.log(`   => Base de données initialiser avec succès...
+`);
+
 	db.close()
 }
 
@@ -57,9 +62,11 @@ async function addMangas(mangas) {
 		}
 	});
 
-	insertAll(mangas)
+	insertAll(mangas);
 
-	console.log(`db : +${addedSuccessfuly} manga, failed: ${mangas.length - addedSuccessfuly}`);
+  prompt_end_log();
+	console.log(`   => identification de ${mangas.length} mangas sur Japscan...`);
+	console.log(`   => Ajout de ${addedSuccessfuly} mangas avec succès, ${mangas.length - addedSuccessfuly} échecs...`);
 	db.close();
 }
 
@@ -109,4 +116,13 @@ function getChapterToParse() {
 	return chapters;
 }
 
-module.exports = { initDB, addMangas, addChapters, getMangaToParse, getChapterToParse };
+function getChapterCount() {
+	const db = new Database('librairy.db', { readonly: true });
+	const stmt = db.prepare('select count(url) as chapters from chapter');
+	chapters = stmt.all()
+	db.close();
+
+	return chapters;
+}
+
+module.exports = { initDB, addMangas, addChapters, getMangaToParse, getChapterToParse, getChapterCount };

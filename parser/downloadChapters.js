@@ -13,8 +13,9 @@ puppeteer.use(anonymizeUserAgent({}))
 
 const { isRequestAuthorized } = require('../utils/requestHandling');
 const { getChapterToParse } = require('../utils/database');
+
+const { prompt_start_log, prompt_end_log, prompt_download_chapters } = require('../utils/prompt')
 const { Cluster } = require('puppeteer-cluster');
-const config = require('config');
 const fs = require('fs');
 const { request } = require('https');
 const path = require('path');
@@ -23,49 +24,35 @@ function sleep(ms) {
 	return new Promise(resolve => setTimeout(resolve, ms));
 }
 
+const config = require('config');
+
+const CLUSTER_CONFIG = config.get('cluster.dowloader'); 
+const PUPPETEER_CONFIG = config.get('browser');
+
 const clusterOptions = {
 		concurrency: Cluster.CONCURRENCY_PAGE,
-		maxConcurrency: 9,
+		maxConcurrency: CLUSTER_CONFIG.maxConcurrency,
+    retryLimit: CLUSTER_CONFIG.retryLimit,
+    timeout: CLUSTER_CONFIG.timeout,
 		puppeteer,
-		retryLimit: 1,
-		timeout: 120000, // TODO: 2min, set in config file
 		monitor: true,
 		puppeteerOptions: {
-			headless: 'new',
-      executablePath: "/run/current-system/sw/bin/google-chrome-stable"
+			headless: PUPPETEER_CONFIG.isHeadless,
+      devtools: PUPPETEER_CONFIG.showDevtools,
+      executablePath: PUPPETEER_CONFIG.executablePath
 		},
 	}
 
 async function parsingChapter() {
 	const chapters = getChapterToParse();
-	console.log('parsing chapter...');
+  prompt_download_chapters();
+  prompt_start_log();
 
-	// creation of a cluster
 	const cluster = await Cluster.launch(clusterOptions);
-	// const cluster2 = await Cluster.launch(clusterOptions);
-	// const cluster3 = await Cluster.launch(clusterOptions);
-	// const cluster4 = await Cluster.launch(clusterOptions);
-
 	await cluster.task(clusterTask);
-	// await cluster2.task(clusterTask)
-	// await cluster3.task(clusterTask)
-	// await cluster4.task(clusterTask)
 
-
-	var counter = 1;
-	// console.log(chapters);
 	for (const chapter of chapters) {
-		// if (counter == 1) {
 			await cluster.queue(chapter).catch(err => console.log(err));
-		// }
-		// else if (counter == 2){
-		// 	await cluster3.queue(chapter).catch(err => console.log(err));
-		// }
-		// else if (counter == 3){
-		// 	await cluster2.queue(chapter).catch(err => console.log(err));
-		// 	counter = 0
-		// }
-		// counter++
 	}
 
 	cluster.on('taskerror', (err, data, willRetry) => {
@@ -75,35 +62,11 @@ async function parsingChapter() {
 			console.error(`Failed to crawl ${data}: ${err.message}`);
 		}
 	});
-	// cluster2.on('taskerror', (err, data, willRetry) => {
-	// 	if (willRetry) {
-	// 		console.warn(`Encountered an error while crawling ${data}. ${err.message}\nThis job will be retried`);
-	// 	} else {
-	// 		console.error(`Failed to crawl ${data}: ${err.message}`);
-	// 	}
-	// });
 
-	// cluster3.on('taskerror', (err, data, willRetry) => {
-	// 	if (willRetry) {
-	// 		console.warn(`Encountered an error while crawling ${data}. ${err.message}\nThis job will be retried`);
-	// 	} else {
-	// 		console.error(`Failed to crawl ${data}: ${err.message}`);
-	// 	}
-	// });
 	await cluster.idle().then((state = 0));
 	await cluster.close().then(() => {
-		console.log('finish');
+    prompt_end_log();
 	});
-	// await cluster2.idle().then((state = 0));
-	// await cluster2.close().then(() => {
-	// 	console.log('finish');
-	// });
-	// await cluster3.idle().then((state = 0));
-	// await cluster3.close().then(() => {
-	// 	console.log('finish');
-	// });
-
-
 }
 
 	async function filterImages(request) {
